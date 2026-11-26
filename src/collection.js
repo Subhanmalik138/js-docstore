@@ -5,7 +5,7 @@ const { matchDocument, compareDocs, projectDoc } = require('./query');
 
 // A collection is an in-memory table of JSON documents, keyed by `_id`.
 // All reads return deep clones so callers can never mutate stored state.
-// Index support lives in ./index.js and is wired in by the store layer.
+// Equality indexes (see ./index.js) narrow `find` to candidate documents.
 
 const UPDATE_OPERATORS = new Set(['$set', '$unset', '$inc', '$push', '$pull', '$addToSet']);
 
@@ -225,6 +225,24 @@ class Collection {
       }
     }
     return { deleted };
+  }
+
+  /** Build an equality index on `field`, covering existing documents. */
+  createIndex(field) {
+    if (this.indexes.has(field)) return { created: false, field };
+    const { Index } = require('./index');
+    const index = new Index(field);
+    for (const doc of this.docs.values()) index.add(doc);
+    this.indexes.set(field, index);
+    return { created: true, field };
+  }
+
+  dropIndex(field) {
+    return { dropped: this.indexes.delete(field), field };
+  }
+
+  listIndexes() {
+    return [...this.indexes.keys()];
   }
 
   /** Plain-object snapshot for persistence (docs + indexed fields). */
