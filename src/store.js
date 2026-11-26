@@ -130,7 +130,7 @@ class DocStore {
   }
 
   insert(coll, doc) {
-    const inserted = this._coll(coll).insert(doc);
+    const inserted = this.collection(coll).insert(doc);
     this._append({ op: 'insert', coll, doc: inserted });
     return inserted;
   }
